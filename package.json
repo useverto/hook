@@ -1,0 +1,25 @@
+{
+  "name": "verto-hook",
+  "version": "1.0.0",
+  "description": "Verto discord notifications",
+  "main": "index.js",
+  "author": "Verto team",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check ."
+  },
+  "gitHooks": {
+    "pre-commit": "prettier --write . && git add -A"
+  },
+  "devDependencies": {
+    "prettier": "^2.2.1",
+    "typescript": "^4.1.3",
+    "yorkie": "^2.0.0"
+  },
+  "dependencies": {
+    "@vercel/node": "^1.8.5",
+    "arweave": "^1.10.0"
+  }
+}
