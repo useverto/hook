@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/transaction.ts": {
+      "includeFiles": "cache.json"
+    }
+  }
+}

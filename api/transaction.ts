@@ -1,17 +1,19 @@
 import { NowRequest, NowResponse } from "@vercel/node";
 import Arweave from "arweave";
 import webhook from "webhook-discord";
+import { readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 
 const arweave = Arweave.init({
-  host: "arweave.net",
-  port: 443,
-  protocol: "https",
-  timeout: 20000,
-  logging: false,
-});
-
-// array of transaction IDs that are already sent to discord
-let cached: string[] = [];
+    host: "arweave.net",
+    port: 443,
+    protocol: "https",
+    timeout: 20000,
+    logging: false,
+  }),
+  cacheFile = readFileSync(join(__dirname, "../cache.json")),
+  cache = JSON.parse(new TextDecoder().decode(cacheFile)),
+  cachedTransactions: string[] = cache.transactions;
 
 export default async (req: NowRequest, res: NowResponse) => {
   if (
@@ -29,8 +31,8 @@ export default async (req: NowRequest, res: NowResponse) => {
     to: string = req.query.to, // to amount + pst/coin
     Hook = new webhook.Webhook(process.env.WEBHOOK);
 
-  if (cached.includes(transactionID))
-    return res.status(403).send("Already cached");
+  if (cachedTransactions.includes(transactionID))
+    return res.status(403).send("Already sent");
 
   return await arweave.transactions
     .get(req.query.id)
@@ -58,8 +60,6 @@ export default async (req: NowRequest, res: NowResponse) => {
             if (status.status !== 202)
               return res.status(403).send("Already completed");
 
-            cached.push(transactionID);
-
             const discordMessage = new webhook.MessageBuilder()
               .setColor("#b075cd")
               .setFooter(
@@ -71,6 +71,18 @@ export default async (req: NowRequest, res: NowResponse) => {
                 `A new Verto swap has been made (**${from}** -> **${to}**)`
               )
               .setName("Verto");
+
+            writeFileSync(
+              join(__dirname, "../cache.json"),
+              JSON.stringify(
+                {
+                  ...cache,
+                  transactions: [...cachedTransactions, transactionID],
+                },
+                null,
+                2
+              )
+            );
 
             await Hook.send(discordMessage);
             return res.status(200).send("Sent webhook");
