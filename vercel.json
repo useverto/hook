@@ -1,7 +1,8 @@
 {
-  "functions": {
-    "api/transaction.ts": {
-      "includeFiles": "cache.json"
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "https://discord.gg/sNgJkMg"
     }
-  }
+  ]
 }
