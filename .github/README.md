@@ -1,13 +1,7 @@
 <p align="center">
   <a href="https://verto.exchange">
-    <img src="../static/logo.png" alt="Verto logo (dark version)" width="110">
+    <img src="../static/logo.png" alt="Verto logo (dark version)" width="200">
   </a>
-
-  <h3 align="center">Verto</h3>
-
-  <p align="center">
-    A decentralized token exchange protocol on Arweave
-  </p>
 </p>
 
 ## About
