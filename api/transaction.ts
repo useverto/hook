@@ -1,8 +1,9 @@
 import { NowRequest, NowResponse } from "@vercel/node";
 import Arweave from "arweave";
 import webhook from "webhook-discord";
-import Transaction from "arweave/node/lib/transaction";
 import Verto from "@verto/lib";
+import { tx } from "ar-gql";
+import { GQLNodeInterface } from "ar-gql/dist/types";
 
 const arweave = Arweave.init({
     host: "arweave.net",
@@ -20,7 +21,7 @@ export default async (req: NowRequest, res: NowResponse) => {
 
   const transactionID: string = req.query.id,
     Hook = new webhook.Webhook(process.env.WEBHOOK),
-    transaction = await arweave.transactions.get(transactionID),
+    transaction = await tx(transactionID),
     eligible: boolean = await checkEligibility(transaction);
 
   // Check eligibility of transaction supplied
@@ -70,31 +71,22 @@ export default async (req: NowRequest, res: NowResponse) => {
  * @param transaction Arweave Transaction
  * @returns boolean
  */
-async function checkEligibility(transaction: Transaction) {
-  let vertoTag: boolean = false;
+async function checkEligibility(transaction: GQLNodeInterface) {
+  let isMining: boolean = transaction.block ? false : true;
+
+  let vertoTag: boolean = transaction.tags.find(
+    (tag) => tag.name === "Exchange" && tag.value === "Verto"
+  )
+    ? true
+    : false;
+
   let toTradingPost: boolean = false;
-  let isMining: boolean = false;
-
   const tradingPosts = await verto.getTradingPosts();
-  const txStatus = await arweave.transactions.getStatus(transaction.id);
-
-  // Loop through tags to ensure it meets the Verto Protocol Tag Standard
-  transaction["tags"].forEach((tag) => {
-    let key = tag.get("name", { decode: true, string: true });
-    let value = tag.get("value", { decode: true, string: true });
-
-    if (key === "Exchange" && value === "Verto") vertoTag = true;
-  });
-
-  // Ensure transaction is being sent to a valid trading post
   for (let i = 0; i < tradingPosts.length; i++) {
-    if (tradingPosts[i] === transaction.target) toTradingPost = true;
+    if (tradingPosts[i] === transaction.recipient) toTradingPost = true;
   }
 
-  // Ensure transaction is actively being mined
-  if (txStatus.status === 202) isMining = true;
-
-  if (vertoTag && toTradingPost && isMining) return true;
+  if (isMining && vertoTag && toTradingPost) return true;
   else return false;
 }
 
@@ -104,7 +96,7 @@ async function checkEligibility(transaction: Transaction) {
  * @returns fromCurrency, toCurrency, fromAmount, id
  */
 async function getNecessaryInfo(
-  transaction: Transaction
+  transaction: GQLNodeInterface
 ): Promise<{
   fromCurrency: string;
   toCurrency: string;
@@ -116,52 +108,53 @@ async function getNecessaryInfo(
     toCurrency: string = "",
     id: string = "";
 
-  transaction["tags"].forEach((tag) => {
-    let key = tag.get("name", { decode: true, string: true });
-    let value = tag.get("value", { decode: true, string: true });
-
+  transaction.tags.forEach(({ name, value }) => {
     // If quantity is zero, we're dealing with an ETH or PST input
-    if (transaction.quantity === "0") {
+    if (transaction.quantity.winston === "0") {
       // Case: PST --> AR
-      if (key === "Contract") {
+      if (name === "Contract") {
         fromCurrency = value;
         toCurrency = "AR";
       }
-      if (key === "Input") {
+      if (name === "Input") {
         let input = JSON.parse(value);
         fromAmount = input.qty;
         id = transaction.id;
       }
 
       // Case: ETH --> AR
-      if (key === "Chain" && value === "ETH") {
+      if (name === "Chain" && value === "ETH") {
         fromCurrency = "ETH";
       }
-      if (key === "Hash") {
+      if (name === "Hash") {
         id = value;
       }
-      if (key === "Value") {
+      if (name === "Value") {
         fromAmount = parseFloat(value);
       }
 
       // Case: ETH --> PST
-      if (key === "Token") {
+      if (name === "Token") {
         toCurrency = value;
       }
     } else {
       // Case: AR --> ETH
-      if (key === "Chain" && value === "ETH") {
+      if (name === "Chain" && value === "ETH") {
         fromCurrency = "AR";
         toCurrency = "ETH";
-        fromAmount = parseFloat(arweave.ar.winstonToAr(transaction.quantity));
+        fromAmount = parseFloat(
+          arweave.ar.winstonToAr(transaction.quantity.winston)
+        );
         id = transaction.id;
       }
 
       // Case: AR --> PST
-      if (key === "Token") {
+      if (name === "Token") {
         fromCurrency = "AR";
         toCurrency = value;
-        fromAmount = parseFloat(arweave.ar.winstonToAr(transaction.quantity));
+        fromAmount = parseFloat(
+          arweave.ar.winstonToAr(transaction.quantity.winston)
+        );
         id = transaction.id;
       }
     }
