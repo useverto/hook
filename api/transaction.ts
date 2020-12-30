@@ -38,7 +38,7 @@ export default async (req: NowRequest, res: NowResponse) => {
     const transactionURL =
       necessaryInfo.id.substring(0, 2) === "0x"
         ? `https://etherscan.io/tx/${necessaryInfo.id}`
-        : `https://viewblock.io/arweave/tx/${necessaryInfo.id}`;
+        : `https://orbit.verto.exchange/order?id=${necessaryInfo.id}`;
 
     // Create the Discord rich-embed
     const discordMessage = new webhook.MessageBuilder()
