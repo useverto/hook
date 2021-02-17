@@ -81,7 +81,8 @@ async function checkEligibility(transaction: GQLNodeInterface) {
     : false;
 
   let toTradingPost: boolean =
-    transaction.recipient === "WNeEQzI24ZKWslZkQT573JZ8bhatwDVx6XVDrrGbUyk";
+    transaction.recipient === "WNeEQzI24ZKWslZkQT573JZ8bhatwDVx6XVDrrGbUyk" ||
+    transaction.recipient === "dxGmt44SZenqmHa-_IEl8AmuejgITs4pB3oe-xUR36A";
 
   if (isMining && vertoTag && toTradingPost) return true;
   else return false;
